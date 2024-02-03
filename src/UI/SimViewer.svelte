@@ -18,7 +18,7 @@
 		{
 			for (let y = 0; y < Simulation.grid[0].length; y++)
 			{
-				ctx.fillStyle = Simulation.grid[x][y] ? '#d33' : '#33d';
+				ctx.fillStyle = Simulation.grid[x][y] ? '#700' : '#007';
 				ctx.beginPath();
 				ctx.fillRect(x * xTileSize, y * yTileSize, xTileSize, yTileSize);
 				ctx.closePath();

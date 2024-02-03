@@ -11,21 +11,22 @@ export default new class Simulation {
 		Chi: 0,
 	}
 
-	#running = true;
+	#running = false;
 	get running() {
 		return this.#running;
 	}
 	set running(_run) {
-		if (_run && !this.running) this.loop(); 
+		let startRunning = _run && !this.running
 		this.#running = _run;
+		if (startRunning) this.loop();
 	}
 
 	constructor() {
 		window.Simulation = this;
 		this.physics.Chi = 2 * this.physics.interactions.AB - this.physics.interactions.AA - this.physics.interactions.BB;
 
-		const width = 100;
-		const height = 100;
+		const width = 10;
+		const height = 10;
 		let particleACount = Math.floor(width * height / 2);
 		let particleBCount = width * height - particleACount;
 
@@ -43,8 +44,6 @@ export default new class Simulation {
 				this.grid[x][y] = particles.pop();
 			}
 		}
-
-		this.loop();
 	}
 
 
@@ -56,15 +55,10 @@ export default new class Simulation {
 			for (let y = 0; y < _grid[0].length; y++)
 			{
 				let self = _grid[x][y];
-				let neighbours = [];
-				if (_grid[x + 1]) neighbours.push(_grid[x + 1][y]);
-				if (_grid[x][y + 1]) neighbours.push(_grid[x][y + 1]);
-
-				for (let neighbour of neighbours)
-				{
-					let energy = (self * (1 - neighbour) + neighbour * (1 - self)) * this.physics.Chi;
-					total += energy;
-				}
+				let otherNeighbours = 0;
+				if (_grid[x + 1]) otherNeighbours += Math.abs(self - _grid[x + 1][y]);
+				if (_grid[x][y + 1]) otherNeighbours += Math.abs(self - _grid[x][y + 1]);
+				total += otherNeighbours * this.physics.Chi;;
 			}
 		}
 
@@ -73,13 +67,17 @@ export default new class Simulation {
 
 	loop() {
 		if (!this.running) return;
-		for (let i = 0; i < 50; i++) this.step();
+		// for (let i = 0; i < 5; i++) 
+		this.step();
 		setTimeout(() => this.loop(), 1);
 	}
 
 	step() {
+		// console.time('energy');
 		let curEnergy = this.calcEnergy(this.grid);
+		// console.timeEnd('energy');
 
+		// console.time('swap');
 		let x1 = Math.floor(Math.random() * this.grid.length);
 		let y1 = Math.floor(Math.random() * this.grid[0].length);
 		let particle1 = this.grid[x1][y1];
@@ -98,13 +96,11 @@ export default new class Simulation {
 
 		let newEnergy = this.calcEnergy(proposedGrid);
 		let dEnergy = newEnergy - curEnergy;
+		// console.log(dEnergy, [x1, y1], [x2, y2]);
 
 		let accepted = dEnergy < 0; // || Math.random() < Math.exp(-dEnergy);
 		if (accepted) this.grid = proposedGrid;
-
 	}
-
-	
 }
 
 function copyGrid(_grid) {
