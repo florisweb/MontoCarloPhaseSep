@@ -1,17 +1,25 @@
 import { shuffleArray } from './extraFunctions';
 
+const AA = 0
+const BB = 0;
+const CC = 0;
+const AB = 5;
+// C = emulgator
+const AC = 2;
+const BC = 2;
+
 export default new class Simulation {
 	grid = [];
 	history = {
 		energy: [],
 	}
 	physics = {
-		interactions: {
-			AA: 3,
-			AB: 5,
-			BB: 0,
-		},
-		Chi: 0,
+		interactions: [
+			[AA, AB, AC],
+			[AB, BB, BC],
+			[AC, BC, CC]
+		],
+		// Chi: 0,
 		Beta: 0,
 		Kb: 1.380 * Math.pow(10, -23), // J/K
 		T: 293, // K
@@ -33,7 +41,6 @@ export default new class Simulation {
 
 	constructor() {
 		window.Simulation = this;
-		this.physics.Chi = 2 * this.physics.interactions.AB - this.physics.interactions.AA - this.physics.interactions.BB;
 		this.physics.Beta = 1 / (this.physics.Kb * this.physics.T);
 
 		const width = 100;
@@ -43,7 +50,7 @@ export default new class Simulation {
 
 	loop() {
 		if (!this.running) return;
-		this.history.energy.push(this.calcEnergy(this.grid));
+		// this.history.energy.push(this.calcEnergy(this.grid));
 		for (let i = 0; i < 50000; i++) this.step();
 		setTimeout(() => this.loop(), 1);
 	}
@@ -63,9 +70,8 @@ export default new class Simulation {
 		}
 
 		// TODO: x1, y1 cannot be a neighbour of x2, y2
-		let subEnergyPre = this.getAllOtherNeighbours(x1, y1) * this.physics.Chi + this.getAllOtherNeighbours(x2, y2) * this.physics.Chi;
-		let subEnergyPost = (4 - this.getAllOtherNeighbours(x1, y1)) * this.physics.Chi + (4 - this.getAllOtherNeighbours(x2, y2)) * this.physics.Chi;
-
+		let subEnergyPre = this.getTileEnergy(x1, y1) + this.getTileEnergy(x2, y2);
+		let subEnergyPost = this.getTileEnergy(x1, y1, this.grid[x2][y2]) + this.getTileEnergy(x2, y2, this.grid[x1][y1]);
 		let dEnergy = subEnergyPost - subEnergyPre;
 
 		let accepted = dEnergy < 0 || Math.random() < Math.exp(-dEnergy * this.physics.Beta);
@@ -77,12 +83,14 @@ export default new class Simulation {
 
 	generateGrid(_width, _height) {
 		let grid = [];
-		let particleACount = Math.floor(_width * _height * .4);
-		let particleBCount = _width * _height - particleACount;
-
+		let particleCounts = [Math.floor(_width * _height * .4), Math.floor(_width * _height * .4)];
+		particleCounts.push(_width * _height - particleCounts.reduce((a, b) => a + b, 0));
+		
 		let particles = [];
-		for (let a = 0; a < particleACount; a++) particles.push(0);
-		for (let b = 0; b < particleBCount; b++) particles.push(1);
+		for (let i = 0; i < particleCounts.length; i++)
+		{
+			for (let a = 0; a < particleCounts[i]; a++) particles.push(i);
+		}
 		particles = shuffleArray(particles);
 
 		for (let x = 0; x < _width; x++)
@@ -97,47 +105,56 @@ export default new class Simulation {
 	}
 
 
-	calcEnergy(_grid) {
-		let total = 0;
-		for (let x = 0; x < _grid.length; x++)
-		{
-			for (let y = 0; y < _grid[0].length; y++)
-			{
-				let self = _grid[x][y];
-				let otherNeighbours = 0;
-				if (_grid[x + 1]) 
-				{
-					otherNeighbours += Math.abs(self - _grid[x + 1][y]);
-				} else otherNeighbours += Math.abs(self - _grid[0][y]); // Wrap
-				if (_grid[x][y + 1]) {
-					otherNeighbours += Math.abs(self - _grid[x][y + 1]);
-				} else otherNeighbours += Math.abs(self - _grid[x][0]);
-				total += otherNeighbours * this.physics.Chi;
-			}
-		}
+	// calcEnergy(_grid) {
+	// 	let total = 0;
+	// 	for (let x = 0; x < _grid.length; x++)
+	// 	{
+	// 		for (let y = 0; y < _grid[0].length; y++)
+	// 		{
+	// 			let self = _grid[x][y];
+	// 			let otherNeighbours = 0;
+	// 			if (_grid[x + 1]) 
+	// 			{
+	// 				otherNeighbours += Math.abs(self - _grid[x + 1][y]);
+	// 			} else otherNeighbours += Math.abs(self - _grid[0][y]); // Wrap
+	// 			if (_grid[x][y + 1]) {
+	// 				otherNeighbours += Math.abs(self - _grid[x][y + 1]);
+	// 			} else otherNeighbours += Math.abs(self - _grid[x][0]);
+	// 			total += otherNeighbours * this.physics.Chi;
+	// 		}
+	// 	}
 
-		return total / this.grid.length / this.grid[0].length;
-	}
+	// 	return total / this.grid.length / this.grid[0].length;
+	// }
 
-	getAllOtherNeighbours(x, y) {
-		let self = this.grid[x][y];
-		let otherNeighbours = 0;
+
+	getTileEnergy(x, y, _self) {
+		let self = typeof _self !== 'undefined' ? _self : this.grid[x][y];
+		let energy = 0;
+
+		let neighbours = [];
+
 		if (typeof this.grid[x + 1] !== 'undefined') {
-			otherNeighbours += Math.abs(self - this.grid[x + 1][y]);
-		} else otherNeighbours += Math.abs(self - this.grid[0][y]); // Wrap
+			neighbours.push(this.grid[x + 1][y]);
+		} else neighbours.push(this.grid[0][y]); // Wrap
 		
 		if (typeof this.grid[x - 1] !== 'undefined') {
-			otherNeighbours += Math.abs(self - this.grid[x - 1][y]);
-		} else otherNeighbours += Math.abs(self - this.grid[this.grid.length - 1][y]); // Wrap
-		
+			neighbours.push(this.grid[x - 1][y]);
+		} else neighbours.push(this.grid[this.grid.length - 1][y]); // Wrap
+
 		if (typeof this.grid[x][y + 1] !== 'undefined') {
-			otherNeighbours += Math.abs(self - this.grid[x][y + 1]);
-		} else otherNeighbours += Math.abs(self - this.grid[x][0]);
+			neighbours.push(this.grid[x][y + 1]);
+		} else neighbours.push(this.grid[x][0]); // Wrap
 
 		if (typeof this.grid[x][y - 1] !== 'undefined') {
-			otherNeighbours += Math.abs(self - this.grid[x][y - 1]);
-		} else otherNeighbours += Math.abs(self - this.grid[x][this.grid[0].length - 1]);
+			neighbours.push(this.grid[x][y - 1]);
+		} else neighbours.push(this.grid[x][this.grid[0].length - 1]); // Wrap
 
-		return otherNeighbours;
+		for (let neighbour of neighbours)
+		{
+			energy += this.physics.interactions[self][neighbour];
+		}
+
+		return energy;
 	}
 }

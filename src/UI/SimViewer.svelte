@@ -9,6 +9,7 @@
 	$: if (ctx && !running) render();
 
 	function render() {
+		const colors = ['#700', '#070', '#007', '#770', '#707', '#077'];
 		running = true;
 		const xTileSize = canvas.width / Simulation.grid.length;
 		const yTileSize = canvas.height / Simulation.grid[0].length;
@@ -18,7 +19,7 @@
 		{
 			for (let y = 0; y < Simulation.grid[0].length; y++)
 			{
-				ctx.fillStyle = Simulation.grid[x][y] ? '#700' : '#007';
+				ctx.fillStyle = colors[Simulation.grid[x][y]];
 				ctx.beginPath();
 				ctx.fillRect(x * xTileSize, y * yTileSize, xTileSize, yTileSize);
 				ctx.closePath();
