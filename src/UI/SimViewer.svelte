@@ -23,6 +23,13 @@
 				ctx.fillRect(x * xTileSize, y * yTileSize, xTileSize, yTileSize);
 				ctx.closePath();
 				ctx.fill();
+
+				// ctx.fillStyle = '#fff';
+				// ctx.textAlign = 'center';
+				// ctx.beginPath();
+				// ctx.fillText(`(${x}, ${y})`, x * xTileSize + xTileSize / 2, y * yTileSize + yTileSize / 2);
+				// ctx.closePath();
+				// ctx.fill();
 			}
 		}
 
