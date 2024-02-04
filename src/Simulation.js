@@ -2,9 +2,12 @@ import { shuffleArray } from './extraFunctions';
 
 export default new class Simulation {
 	grid = [];
+	history = {
+		energy: [],
+	}
 	physics = {
 		interactions: {
-			AA: 0,
+			AA: 3,
 			AB: 5,
 			BB: 0,
 		},
@@ -13,6 +16,10 @@ export default new class Simulation {
 		Kb: 1.380 * Math.pow(10, -23), // J/K
 		T: 293, // K
 	}
+
+	steps = 0;
+
+
 
 	#running = false;
 	get running() {
@@ -29,14 +36,48 @@ export default new class Simulation {
 		this.physics.Chi = 2 * this.physics.interactions.AB - this.physics.interactions.AA - this.physics.interactions.BB;
 		this.physics.Beta = 1 / (this.physics.Kb * this.physics.T);
 
-		const width = 300;
-		const height = 300;
+		const width = 100;
+		const height = 100;
 		this.grid = this.generateGrid(width, height);
 	}
 
+	loop() {
+		if (!this.running) return;
+		this.history.energy.push(this.calcEnergy(this.grid));
+		for (let i = 0; i < 50000; i++) this.step();
+		setTimeout(() => this.loop(), 1);
+	}
+
+	step() {
+		this.steps++;
+		let x1 = Math.floor(Math.random() * this.grid.length);
+		let y1 = Math.floor(Math.random() * this.grid[0].length);
+		let particle1 = this.grid[x1][y1];
+
+		let x2 = Math.floor(Math.random() * this.grid.length);
+		let y2 = Math.floor(Math.random() * this.grid[0].length);
+		while (particle1 === this.grid[x2][y2] || (x1 === x2 && y1 === y2))
+		{
+			x2 = Math.floor(Math.random() * this.grid.length);
+			y2 = Math.floor(Math.random() * this.grid[0].length);
+		}
+
+		// TODO: x1, y1 cannot be a neighbour of x2, y2
+		let subEnergyPre = this.getAllOtherNeighbours(x1, y1) * this.physics.Chi + this.getAllOtherNeighbours(x2, y2) * this.physics.Chi;
+		let subEnergyPost = (4 - this.getAllOtherNeighbours(x1, y1)) * this.physics.Chi + (4 - this.getAllOtherNeighbours(x2, y2)) * this.physics.Chi;
+
+		let dEnergy = subEnergyPost - subEnergyPre;
+
+		let accepted = dEnergy < 0 || Math.random() < Math.exp(-dEnergy * this.physics.Beta);
+		if (!accepted) return;
+		this.grid[x1][y1] = this.grid[x2][y2];
+		this.grid[x2][y2] = particle1;
+	}
+
+
 	generateGrid(_width, _height) {
 		let grid = [];
-		let particleACount = Math.floor(_width * _height / 2);
+		let particleACount = Math.floor(_width * _height * .4);
 		let particleBCount = _width * _height - particleACount;
 
 		let particles = [];
@@ -54,7 +95,6 @@ export default new class Simulation {
 		}
 		return grid;
 	}
-
 
 
 	calcEnergy(_grid) {
@@ -79,43 +119,6 @@ export default new class Simulation {
 		return total / this.grid.length / this.grid[0].length;
 	}
 
-	loop() {
-		if (!this.running) return;
-		console.time('run');
-		for (let i = 0; i < 100000; i++) this.step();
-		console.timeEnd('run');
-		setTimeout(() => this.loop(), 1);
-	}
-
-	step() {
-		// let curEnergy = this.calcEnergy(this.grid);
-		
-
-		let x1 = Math.floor(Math.random() * this.grid.length);
-		let y1 = Math.floor(Math.random() * this.grid[0].length);
-		let particle1 = this.grid[x1][y1];
-
-		let x2 = Math.floor(Math.random() * this.grid.length);
-		let y2 = Math.floor(Math.random() * this.grid[0].length);
-		while (particle1 === this.grid[x2][y2] || (x1 === x2 && y1 === y2))
-		{
-			x2 = Math.floor(Math.random() * this.grid.length);
-			y2 = Math.floor(Math.random() * this.grid[0].length);
-		}
-
-		// x1, y1 niet naast x2, y2
-		let subEnergyPre = this.getAllOtherNeighbours(x1, y1) * this.physics.Chi + this.getAllOtherNeighbours(x2, y2) * this.physics.Chi;
-		let subEnergyPost = (4 - this.getAllOtherNeighbours(x1, y1)) * this.physics.Chi + (4 - this.getAllOtherNeighbours(x2, y2)) * this.physics.Chi;
-
-		let dEnergy = subEnergyPost - subEnergyPre;
-
-		let accepted = dEnergy < 0|| Math.random() < Math.exp(-dEnergy * this.physics.Beta);
-		if (accepted) {
-			this.grid[x1][y1] = this.grid[x2][y2];
-			this.grid[x2][y2] = particle1;
-		}
-	}
-
 	getAllOtherNeighbours(x, y) {
 		let self = this.grid[x][y];
 		let otherNeighbours = 0;
@@ -137,10 +140,4 @@ export default new class Simulation {
 
 		return otherNeighbours;
 	}
-}
-
-function copyGrid(_grid) {
-	let newGrid = [];
-	for (let arr of _grid) newGrid.push(Object.assign([], arr));
-	return newGrid;
 }
