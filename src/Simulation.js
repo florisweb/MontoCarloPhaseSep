@@ -9,6 +9,9 @@ export default new class Simulation {
 			BB: 0,
 		},
 		Chi: 0,
+		Beta: 0,
+		Kb: 1.380 * Math.pow(10, -23), // J/K
+		T: 293, // K
 	}
 
 	#running = false;
@@ -24,9 +27,10 @@ export default new class Simulation {
 	constructor() {
 		window.Simulation = this;
 		this.physics.Chi = 2 * this.physics.interactions.AB - this.physics.interactions.AA - this.physics.interactions.BB;
+		this.physics.Beta = 1 / (this.physics.Kb * this.physics.T);
 
-		const width = 500;
-		const height = 500;
+		const width = 300;
+		const height = 300;
 		this.grid = this.generateGrid(width, height);
 	}
 
@@ -105,26 +109,11 @@ export default new class Simulation {
 
 		let dEnergy = subEnergyPost - subEnergyPre;
 
-		let accepted = dEnergy < 0; // || Math.random() < Math.exp(-dEnergy);
+		let accepted = dEnergy < 0|| Math.random() < Math.exp(-dEnergy * this.physics.Beta);
 		if (accepted) {
 			this.grid[x1][y1] = this.grid[x2][y2];
 			this.grid[x2][y2] = particle1;
 		}
-
-		// let proposedGrid = copyGrid(this.grid);
-		// proposedGrid[x1][y1] = proposedGrid[x2][y2];
-		// proposedGrid[x2][y2] = particle1;
-		// let newEnergy = this.calcEnergy(proposedGrid);
-		// let dEnergy = (newEnergy - curEnergy) * this.grid.length * this.grid[0].length;
-		// console.log([x1, y1], '<->', [x2, y2], dEnergy, subEnergyPost - subEnergyPre);
-
-		// console.log(dEnergy, [x1, y1], [x2, y2]);
-
-		// let accepted = dEnergy < 0; // || Math.random() < Math.exp(-dEnergy);
-		// if (accepted) this.grid = proposedGrid;
-		
-
-
 	}
 
 	getAllOtherNeighbours(x, y) {
